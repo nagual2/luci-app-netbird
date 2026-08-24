@@ -47,12 +47,36 @@ mkdir -p "$(dirname "$SDK_DIR")"
 
 # Download + extract SDK if missing (cache-friendly).
 ARCHIVE="$SDK_DIR/../sdk.tar.zst"
+
+on_error() {
+	echo "--- DIAGNOSTICS ON FAILURE ---" >&2
+	df -h /tmp . >&2 || true
+	ls -la "$(dirname "$ARCHIVE")" >&2 || true
+}
+trap on_error ERR
+
 if [ ! -d "$SDK_DIR" ]; then
 	log "Downloading SDK..."
-	curl -sL -o "$ARCHIVE" "$SDK_URL"
+	rm -f "$ARCHIVE"
+	if command -v curl >/dev/null 2>&1; then
+		curl -fSL --retry 5 --retry-all-errors --connect-timeout 30 \
+			-o "$ARCHIVE" "$SDK_URL" || {
+			log "curl failed, trying wget..."
+			wget -q --tries=3 --timeout=60 -O "$ARCHIVE" "$SDK_URL"
+		}
+	else
+		wget -q --tries=3 --timeout=60 -O "$ARCHIVE" "$SDK_URL"
+	fi
+	SIZE=$(stat -c%s "$ARCHIVE" 2>/dev/null || stat -f%z "$ARCHIVE" 2>/dev/null || echo 0)
+	[ "$SIZE" -gt 10000000 ] || {
+		echo "Downloaded SDK too small ($SIZE bytes): $SDK_URL" >&2
+		exit 1
+	}
+	log "SDK archive: $SIZE bytes"
 	mkdir -p "$SDK_DIR"
 	tar --zstd -xf "$ARCHIVE" -C "$SDK_DIR" --strip-components=1
 fi
+trap - ERR
 
 log "Syncing netbird into SDK feeds/packages/net/netbird ..."
 rm -rf "$SDK_DIR/feeds/packages/net/netbird"
