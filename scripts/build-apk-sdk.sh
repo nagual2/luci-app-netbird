@@ -41,7 +41,8 @@ need_cmd tar
 need_cmd make
 need_cmd rsync
 
-mkdir -p "$SDK_DIR" "$OUTPUT_DIR"
+OUTPUT_DIR="${OUTPUT_DIR:-$ROOT/dist}"
+mkdir -p "$OUTPUT_DIR"
 
 # Download + extract SDK if missing (cache-friendly).
 ARCHIVE="${RUNNER_TEMP:-/tmp}/openwrt-sdk.tar.zst"
@@ -72,6 +73,7 @@ if [ ! -d "$SDK_DIR" ]; then
 		exit 1
 	}
 	log "SDK archive: $SIZE bytes"
+	mkdir -p "$SDK_DIR"
 	tar --zstd -xf "$ARCHIVE" -C "$SDK_DIR" --strip-components=1
 fi
 trap - ERR
