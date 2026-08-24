@@ -78,8 +78,27 @@ if [ ! -d "$SDK_DIR" ]; then
 fi
 trap - ERR
 
-log "Syncing netbird into SDK feeds/packages/net/netbird ..."
+cd "$SDK_DIR"
+
+FEEDS_LOG="${TMPDIR:-/tmp}/netbird-feeds.log"
+run_feeds() {
+	log "./scripts/feeds $*"
+	if ! ./scripts/feeds "$@" >"$FEEDS_LOG" 2>&1; then
+		echo "--- feeds log (tail) ---" >&2
+		tail -40 "$FEEDS_LOG" >&2
+		exit 1
+	fi
+}
+
+# Feeds must exist before syncing: a freshly extracted SDK has no
+# feeds/packages yet, and git operations must complete before we overlay
+# our own netbird sources into the feed tree.
+run_feeds update base packages
+run_feeds install golang
+run_feeds install -f netbird
+
 rm -rf "$SDK_DIR/feeds/packages/net/netbird"
+mkdir -p "$SDK_DIR/feeds/packages/net/netbird"
 rsync -a \
 	--exclude .git \
 	--exclude build \
@@ -87,12 +106,6 @@ rsync -a \
 	--exclude scripts \
 	--exclude .github \
 	"$ROOT/" "$SDK_DIR/feeds/packages/net/netbird/"
-
-cd "$SDK_DIR"
-
-./scripts/feeds update base packages > /tmp/netbird-feeds.log 2>&1 || true
-./scripts/feeds install golang >> /tmp/netbird-feeds.log 2>&1 || true
-./scripts/feeds install -f netbird >> /tmp/netbird-feeds.log 2>&1 || true
 
 cat > .config <<EOF
 CONFIG_ALL_NONSHARED=n
