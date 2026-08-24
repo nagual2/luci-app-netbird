@@ -40,18 +40,17 @@ need_cmd() {
 need_cmd tar
 need_cmd make
 need_cmd rsync
-need_cmd curl
-need_cmd zstd || true
 
-mkdir -p "$(dirname "$SDK_DIR")"
+mkdir -p "$SDK_DIR" "$OUTPUT_DIR"
 
 # Download + extract SDK if missing (cache-friendly).
-ARCHIVE="$SDK_DIR/../sdk.tar.zst"
+ARCHIVE="${RUNNER_TEMP:-/tmp}/openwrt-sdk.tar.zst"
+mkdir -p "$(dirname "$ARCHIVE")"
 
 on_error() {
 	echo "--- DIAGNOSTICS ON FAILURE ---" >&2
-	df -h /tmp . >&2 || true
-	ls -la "$(dirname "$ARCHIVE")" >&2 || true
+	df -h /tmp "$SDK_DIR" >&2 || true
+	ls -la "$ARCHIVE" 2>&1 || true
 }
 trap on_error ERR
 
@@ -73,7 +72,6 @@ if [ ! -d "$SDK_DIR" ]; then
 		exit 1
 	}
 	log "SDK archive: $SIZE bytes"
-	mkdir -p "$SDK_DIR"
 	tar --zstd -xf "$ARCHIVE" -C "$SDK_DIR" --strip-components=1
 fi
 trap - ERR
