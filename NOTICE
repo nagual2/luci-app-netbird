@@ -1,0 +1,11 @@
+netbird — WireGuard-based mesh VPN client for OpenWrt
+
+Upstream package: https://github.com/openwrt/packages/tree/master/net/netbird
+Package maintainer: Wesley Gimenes <wehagy@proton.me>
+Software upstream: https://github.com/netbirdio/netbird
+Software license: BSD-3-Clause (netbirdio/netbird)
+OpenWrt packaging: GPL-2.0 / per-file headers in the openwrt/packages tree
+
+This repository is a standalone extract for convenience and version bump
+(0.73.2 -> 0.77.1, see UPSTREAM.md and the open PR). Copyright remains with
+the upstream authors.

@@ -1,0 +1,8 @@
+build/
+dist/
+*.apk
+*.ipk
+*~
+.DS_Store
+Thumbs.db
+scripts/*.local.sh
