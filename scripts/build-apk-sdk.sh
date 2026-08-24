@@ -23,7 +23,10 @@ case "$ROOT" in
 		OUTPUT_DIR="${OUTPUT_DIR:-$ROOT/dist}"
 		;;
 	*)
-		SDK_DIR="${SDK_DIR:-$ROOT/build/sdk}"
+		# Keep the SDK outside the workspace: we rsync "$ROOT/" into the
+		# feed, and an SDK_DIR inside ROOT would copy itself into itself
+		# (sdk/feeds/packages/net/netbird/sdk/... until PATH_MAX blows up).
+		SDK_DIR="${SDK_DIR:-${RUNNER_TEMP:-/tmp}/openwrt-sdk}"
 		OUTPUT_DIR="${OUTPUT_DIR:-$ROOT/dist}"
 		;;
 esac
