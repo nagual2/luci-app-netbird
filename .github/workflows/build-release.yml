@@ -33,7 +33,9 @@ jobs:
       - name: Build APK
         env:
           SDK_URL: ${{ matrix.sdk_url }}
-          SDK_DIR: ${{ github.workspace }}/sdk
+          # Must live outside the workspace: the script rsyncs the repo into
+          # the SDK feed, an in-workspace SDK would copy itself into itself.
+          SDK_DIR: ${{ runner.temp }}/openwrt-sdk
         run: bash scripts/build-apk-sdk.sh
 
       - name: Rename artifacts per arch
