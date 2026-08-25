@@ -53,40 +53,19 @@ jobs:
           path: dist/*
           retention-days: 90
 
-  # After a green build of main: tag the commit with v<PKG_VERSION>.
-  # Created via API on purpose - an API-made tag does not trigger another
-  # workflow run, unlike a git push of the tag.
-  tag:
+  # Every green build of main publishes its packages as a GitHub Release
+  # tagged v<PKG_VERSION>. The release API creates the tag itself, so no extra
+  # workflow run is triggered. Manual pushes of v* tags refresh the same release.
+  release:
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Create version tag if missing
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          VERSION="v$(sed -n 's/^PKG_VERSION:=//p' Makefile)"
-          if git ls-remote --exit-code --tags origin "refs/tags/${VERSION}" >/dev/null 2>&1; then
-            echo "Tag ${VERSION} already exists, skipping"
-          else
-            gh api "repos/${{ github.repository }}/git/refs" \
-              -f ref="refs/tags/${VERSION}" \
-              -f sha="${{ github.sha }}"
-            echo "Created tag ${VERSION} at ${{ github.sha }}"
-          fi
-
-  release:
-    needs: build
-    # Actor guard keeps the auto-tag above from ever producing a release.
-    if: >-
-      github.event_name == 'push' &&
-      startsWith(github.ref, 'refs/tags/v') &&
-      github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    steps:
       - name: Download all package artifacts
         uses: actions/download-artifact@v8
         with:
@@ -94,8 +73,18 @@ jobs:
           pattern: netbird-packages-*
           merge-multiple: true
 
+      - name: Determine release tag
+        id: ver
+        run: |
+          if [[ "${GITHUB_REF}" == "refs/tags/"* ]]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "tag=v$(sed -n 's/^PKG_VERSION:=//p' Makefile)" >> "${GITHUB_OUTPUT}"
+          fi
+
       - name: Attach packages to GitHub Release
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ steps.ver.outputs.tag }}
           files: dist/*
           overwrite_files: true
